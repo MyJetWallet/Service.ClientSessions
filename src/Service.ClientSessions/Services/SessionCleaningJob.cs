@@ -64,6 +64,10 @@ namespace Service.ClientSessions.Services
                         $"Drop session by max count. New Session: {message.Session.RootSessionId}");
                 }
             }
+            catch (FormatException e)
+            {
+                _logger.LogWarning(e, "When cleaning excess sessions");
+            }
             catch (Exception e)
             {
                 _logger.LogError(e, "When cleaning excess sessions");
