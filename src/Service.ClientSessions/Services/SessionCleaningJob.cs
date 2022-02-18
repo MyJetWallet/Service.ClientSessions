@@ -80,7 +80,7 @@ namespace Service.ClientSessions.Services
             try
             {
                 if (!string.IsNullOrEmpty(message.Session.DeviceUid) &&
-                    message.Action != SessionAuditEvent.SessionAction.Refresh)
+                    message.Action == SessionAuditEvent.SessionAction.Login)
                 {
                     var oldSession = await _sessionDeviceUidWriter.GetAsync(
                         RootSessionDeviceUidNoSqlEntity.GeneratePartitionKey(),
@@ -93,8 +93,7 @@ namespace Service.ClientSessions.Services
 
                     var deviceUidEntity = RootSessionDeviceUidNoSqlEntity.Create(message.Session.DeviceUid,
                         message.Session.RootSessionId, message.Session.TraderId);
-                    //deviceUidEntity.Expires = message.Session.Expires?.AddMinutes(5);
-                    await _sessionDeviceUidWriter.InsertOrReplaceAsync(deviceUidEntity).AsTask();
+                    await _sessionDeviceUidWriter.InsertOrReplaceAsync(deviceUidEntity);
                 }
             }
             catch (Exception e)
