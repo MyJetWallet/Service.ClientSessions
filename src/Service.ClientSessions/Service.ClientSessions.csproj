@@ -15,8 +15,8 @@
     <PackageReference Include="MyJetWallet.Sdk.Authorization" Version="3.0.10" />
     <PackageReference Include="MyJetWallet.Sdk.GrpcMetrics" Version="2.0.4" />
     <PackageReference Include="MyJetWallet.Sdk.GrpcSchema" Version="1.0.6" />
-    <PackageReference Include="MyJetWallet.Sdk.NoSql" Version="2.1.6" />
-    <PackageReference Include="MyJetWallet.Sdk.Service" Version="2.1.7" />
+    <PackageReference Include="MyJetWallet.Sdk.NoSql" Version="2.2.2" />
+    <PackageReference Include="MyJetWallet.Sdk.Service" Version="2.2.2" />
     <PackageReference Include="MyJetWallet.Sdk.ServiceBus" Version="2.2.4" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="prometheus-net.AspNetCore" Version="6.0.0" />
