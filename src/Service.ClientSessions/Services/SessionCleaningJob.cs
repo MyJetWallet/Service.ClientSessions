@@ -6,8 +6,10 @@ using DotNetCoreDecorators;
 using Microsoft.Extensions.Logging;
 using MyJetWallet.Sdk.Authorization.NoSql;
 using MyJetWallet.Sdk.Authorization.ServiceBus;
+using MyJetWallet.Sdk.Service;
 using MyJetWallet.Sdk.ServiceBus;
 using MyNoSqlServer.Abstractions;
+using Service.ClientAuditLog.Domain.Models;
 using Service.ClientSessions.Grpc;
 using Service.ClientSessions.Grpc.Models;
 using Service.ClientSessions.Settings;
@@ -22,6 +24,7 @@ namespace Service.ClientSessions.Services
         private readonly IMyNoSqlServerDataWriter<ShortRootSessionNoSqlEntity> _rootSessionWriter;
         private readonly IMyNoSqlServerDataWriter<RootSessionDeviceUidNoSqlEntity> _sessionDeviceUidWriter;
         private readonly IServiceBusPublisher<SessionAuditEvent> _auditPublisher;
+        private readonly IServiceBusPublisher<ClientAuditLogModel> _auditLogPublisher;
 
         public SessionCleaningJob(
             ILogger<SessionCleaningJob> logger, 
@@ -29,13 +32,15 @@ namespace Service.ClientSessions.Services
             IMyNoSqlServerDataWriter<ShortRootSessionNoSqlEntity> rootSessionWriter, 
             IMyNoSqlServerDataWriter<RootSessionNoSqlEntity> sessionWriter, 
             ISubscriber<IReadOnlyList<SessionAuditEvent>> subscriber, 
-            IServiceBusPublisher<SessionAuditEvent> auditPublisher)
+            IServiceBusPublisher<SessionAuditEvent> auditPublisher, 
+            IServiceBusPublisher<ClientAuditLogModel> auditLogPublisher)
         {
             _logger = logger;
             _sessionDeviceUidWriter = sessionDeviceUidWriter;
             _rootSessionWriter = rootSessionWriter;
             _sessionWriter = sessionWriter;
             _auditPublisher = auditPublisher;
+            _auditLogPublisher = auditLogPublisher;
             subscriber.Subscribe(HandleEvent);
         }
 
@@ -89,6 +94,22 @@ namespace Service.ClientSessions.Services
                     {
                         await Logout(oldSession.TraderId, oldSession.RootSessionId,
                             $"Drop session by DeviceUid. New Session: {message.Session.RootSessionId}");
+
+                                                
+                        await _auditLogPublisher.PublishAsync(new ClientAuditLogModel
+                        {
+                            Module = "Service.ClientSessions",
+                            EventId = oldSession.TraderId,
+                            Data = new
+                            {
+                                TraderId = oldSession.TraderId,
+                                RootSessionId = oldSession.RootSessionId,
+                                DeviceUid = message.Session.DeviceUid
+                            }.ToJson(),
+                            ClientId = oldSession.TraderId,
+                            UnixDateTime = DateTime.UtcNow.UnixTime(),
+                            Message = "Session ended. New session with same deviceUid was found"
+                        });
                     }
 
                     var deviceUidEntity = RootSessionDeviceUidNoSqlEntity.Create(message.Session.DeviceUid,

@@ -6,6 +6,7 @@ using MyJetWallet.Sdk.Authorization.ServiceBus;
 using MyJetWallet.Sdk.NoSql;
 using MyJetWallet.Sdk.ServiceBus;
 using MyServiceBus.Abstractions;
+using Service.ClientAuditLog.Domain.Models;
 using Service.ClientSessions.Services;
 
 namespace Service.ClientSessions.Modules
@@ -28,6 +29,7 @@ namespace Service.ClientSessions.Modules
                 SessionAuditEvent.TopicName, queueName, TopicQueueType.PermanentWithSingleConnection);
 
             builder.RegisterMyServiceBusPublisher<SessionAuditEvent>(serviceBusClient, SessionAuditEvent.TopicName, true);
+            builder.RegisterMyServiceBusPublisher<ClientAuditLogModel>(serviceBusClient, ClientAuditLogModel.TopicName, true);
 
             builder.RegisterType<SessionCleaningJob>().AsSelf().AutoActivate().SingleInstance();
         }
