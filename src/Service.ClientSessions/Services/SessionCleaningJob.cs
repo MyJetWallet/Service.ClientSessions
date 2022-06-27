@@ -4,15 +4,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using DotNetCoreDecorators;
 using Microsoft.Extensions.Logging;
+using MyJetWallet.Sdk.Authorization.Extensions;
 using MyJetWallet.Sdk.Authorization.NoSql;
-using MyJetWallet.Sdk.Authorization.ServiceBus;
 using MyJetWallet.Sdk.Service;
 using MyJetWallet.Sdk.ServiceBus;
+using MyJetWallet.ServiceBus.SessionAudit.Models;
 using MyNoSqlServer.Abstractions;
 using Service.ClientAuditLog.Domain.Models;
-using Service.ClientSessions.Grpc;
-using Service.ClientSessions.Grpc.Models;
-using Service.ClientSessions.Settings;
 
 namespace Service.ClientSessions.Services
 {
@@ -102,9 +100,9 @@ namespace Service.ClientSessions.Services
                             EventId = oldSession.TraderId,
                             Data = new
                             {
-                                TraderId = oldSession.TraderId,
-                                RootSessionId = oldSession.RootSessionId,
-                                DeviceUid = message.Session.DeviceUid
+	                            oldSession.TraderId,
+	                            oldSession.RootSessionId,
+	                            message.Session.DeviceUid
                             }.ToJson(),
                             ClientId = oldSession.TraderId,
                             UnixDateTime = DateTime.UtcNow.UnixTime(),
@@ -130,14 +128,15 @@ namespace Service.ClientSessions.Services
             var task2 = _rootSessionWriter.DeleteAsync(RootSessionNoSqlEntity.GeneratePartitionKey(traderId), RootSessionNoSqlEntity.GenerateRowKey(rootSessionId)).AsTask();
             
             await Task.WhenAll(task1, task2);
-            
-            if (task1.Result != null)
+
+	        RootSessionNoSqlEntity rootSessionNoSqlEntity = task1.Result;
+	        if (rootSessionNoSqlEntity != null)
             {
-                if (!string.IsNullOrEmpty(task1.Result.DeviceUid))
+                if (!string.IsNullOrEmpty(rootSessionNoSqlEntity.DeviceUid))
                 {
-                    await _sessionDeviceUidWriter.DeleteAsync(RootSessionDeviceUidNoSqlEntity.GeneratePartitionKey(), RootSessionDeviceUidNoSqlEntity.GenerateRowKey(task1.Result.DeviceUid));
+                    await _sessionDeviceUidWriter.DeleteAsync(RootSessionDeviceUidNoSqlEntity.GeneratePartitionKey(), RootSessionDeviceUidNoSqlEntity.GenerateRowKey(rootSessionNoSqlEntity.DeviceUid));
                 }
-                await _auditPublisher.PublishAsync(SessionAuditEvent.Create(SessionAuditEvent.SessionAction.Logout, task1.Result, debugComment));
+	            await _auditPublisher.PublishAsync(rootSessionNoSqlEntity.ToSessionAuditEvent(SessionAuditEvent.SessionAction.Logout, debugComment));
             }
             else
             {
